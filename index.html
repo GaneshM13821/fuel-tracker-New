@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fuel Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Manrope:wght@700&display=swap" rel="stylesheet">
+  <style>
+    html, body {
+      min-height: 100vh;
+      font-family: 'Inter', 'Manrope', Arial, sans-serif;
+      background: linear-gradient(135deg, #f7fafc 0%, #e0e7ff 100%);
+      color: #222;
+    }
+    header {
+      text-align: center;
+      padding: 24px 0 16px 0;
+      background: linear-gradient(90deg, #6366f1 0%, #06b6d4 100%);
+      color: #fff;
+      border-bottom-left-radius: 2.2rem;
+      border-bottom-right-radius: 2.2rem;
+      box-shadow: 0 4px 24px #6366f111;
+      position: relative;
+    }
+    .sync-status {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      padding: 8px 20px;
+      border-radius: 32px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      box-shadow: 0 2px 12px #06b6d433;
+      background: linear-gradient(90deg, #22c55e 0%, #06b6d4 100%);
+      border: 1.5px solid #fff8;
+      animation: pulseSync 2.5s infinite;
+      z-index: 2;
+    }
+    @keyframes pulseSync {
+      0%,100%{box-shadow:0 2px 12px #06b6d433,0 0 0 7px #fff4;}
+      50%{box-shadow:0 2px 24px #6366f144,0 0 0 12px #06b6d433;}
+    }
+    .sync-online { background: linear-gradient(90deg, #22c55e 0%, #06b6d4 100%);}
+    .sync-offline { background: linear-gradient(90deg, #ef4444 0%, #6366f1 100%);}
+    .sync-syncing { background: linear-gradient(90deg, #facc15 0%, #06b6d4 100%);}
+    .firebase-notice {
+      background: #fef9c3;
+      border: 1.5px solid #facc15;
+      color: #b45309;
+      padding: 15px;
+      border-radius: 1.2rem;
+      margin: 18px auto;
+      text-align: center;
+      max-width: 540px;
+      font-weight: 700;
+      box-shadow: 0 2px 16px #facc1555;
+      font-size: 1.09rem;
+    }
+    .firebase-notice.hidden { display: none; }
+    h1 { margin: 0; font-size: 2.3rem; font-family: 'Manrope', 'Inter', sans-serif; font-weight: 700; }
+    main {
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+      max-width: 900px;
+      margin: auto;
+    }
+    .card {
+      background: rgba(255,255,255,0.96);
+      border-radius: 2rem;
+      padding: 24px;
+      box-shadow: 0 8px 36px 0 rgba(99,102,241,0.10), 0 2px 24px 0 rgba(6,182,212,0.11);
+      border: 2px solid #e0e7ff;
+      margin-bottom: 2rem;
+      transition: box-shadow .3s, border-color .3s;
+      animation: fadeIn 0.4s ease;
+    }
+    .card:hover {
+      box-shadow: 0 16px 48px 0 #6366f122, 0 2px 36px 0 #06b6d433;
+      border-color: #6366f1;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 14px 18px;
+      align-items: end;
+    }
+    .form-grid label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-bottom: 4px;
+      color: #6366f1;
+    }
+    .form-grid input, .form-grid select {
+      width: 100%;
+      max-width: 140px;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1.5px solid #e0e7ff;
+      background: #f7fafc;
+      box-sizing: border-box;
+      font-size: 1rem;
+      color: #222;
+      transition: border-color 0.2s;
+    }
+    .form-grid input:focus, .form-grid select:focus {
+      border-color: #6366f1;
+      outline: none;
+    }
+    button {
+      padding: 10px 22px;
+      font-size: 1.02rem;
+      border-radius: 32px;
+      background: linear-gradient(90deg, #6366f1 0%, #06b6d4 100%);
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.3s, transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 2px 10px #6366f122;
+    }
+    button:hover {
+      background: linear-gradient(90deg, #06b6d4 0%, #6366f1 100%);
+      transform: scale(1.05);
+      box-shadow: 0 4px 24px #6366f144;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    button.danger { background: linear-gradient(90deg, #ef4444 0%, #6366f1 100%);}
+    button.danger:hover { background: linear-gradient(90deg, #6366f1 0%, #ef4444 100%);}
+    button.success { background: linear-gradient(90deg, #22c55e 0%, #06b6d4 100%);}
+    button.success:hover { background: linear-gradient(90deg, #06b6d4 0%, #22c55e 100%);}
+    .action-group {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+    .action-btn {
+      padding: 6px 16px;
+      font-size: 0.95rem;
+      border-radius: 22px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+      background: #e0e7ff;
+      color: #6366f1;
+      border: 2px solid #6366f144;
+      transition: background .18s, color .18s, transform .15s;
+      min-width: 70px;
+      justify-content: center;
+    }
+    .action-btn.edit { background: #f7fafc; color: #06b6d4; border-color: #06b6d488;}
+    .action-btn.edit:hover { background: linear-gradient(90deg, #06b6d4 0%, #6366f1 100%); color: #fff; }
+    .action-btn.delete { background: #fef2f2; color: #ef4444; border-color: #ef444444;}
+    .action-btn.delete:hover { background: linear-gradient(90deg, #ef4444 0%, #6366f1 100%); color: #fff;}
+    .records-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .records-header h2 { margin: 0; }
+    .export-btn { background: linear-gradient(90deg, #6366f1 0%, #06b6d4 100%);}
+    .export-btn:hover { background: linear-gradient(90deg, #06b6d4 0%, #6366f1 100%);}
+    .settings { text-align: right; margin: 10px; }
+    .settings-toggle { background: linear-gradient(90deg, #6366f1 0%, #06b6d4 100%);}
+    .settings-toggle:hover { background: linear-gradient(90deg, #06b6d4 0%, #6366f1 100%);}
+    .settings-panel {
+      display: none;
+      background: #fff;
+      padding: 20px;
+      border-radius: 1.5rem;
+      box-shadow: 0 4px 18px rgba(99,102,241,0.12);
+      margin: 16px auto;
+      max-width: 400px;
+      text-align: center;
+      border: 2px solid #e0e7ff;
+    }
+    .settings-panel label {
+      font-weight: 700;
+      margin-right: 8px;
+      color: #6366f1;
+    }
+    .settings-panel input {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1.5px solid #e0e7ff;
+      width: 130px;
+      font-size: 1rem;
+      background: #f7fafc;
+    }
+    .settings-panel .action-group {
+      margin-top: 18px;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+    }
+    .settings-panel .action-btn {
+      padding: 8px 18px;
+      font-size: 1rem;
+      margin-top: 8px;
+    }
+    .settings-panel .action-btn.save { background: #f7fafc; color: #06b6d4; border-color: #06b6d488;}
+    .settings-panel .action-btn.save:hover { background: linear-gradient(90deg, #06b6d4 0%, #6366f1 100%); color: #fff;}
+    .settings-panel .action-btn.reset { background: #fef2f2; color: #ef4444; border-color: #ef444444;}
+    .settings-panel .action-btn.reset:hover { background: linear-gradient(90deg, #ef4444 0%, #6366f1 100%); color: #fff;}
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; background: #f7fafc; border-radius: 1rem; overflow: hidden;}
+    th, td { border: 1px solid #e0e7ff; padding: 10px; text-align: center; font-size: 1rem; }
+    th { background: #e0e7ff; color: #6366f1; }
+    .toast {
+      visibility: hidden;
+      min-width: 220px;
+      background: linear-gradient(90deg, #6366f1 0%, #06b6d4 100%);
+      color: #fff;
+      text-align: center;
+      border-radius: 1rem;
+      padding: 16px;
+      position: fixed;
+      z-index: 1;
+      left: 50%;
+      bottom: 34px;
+      font-size: 1.08rem;
+      opacity: 0;
+      transition: opacity 0.5s, visibility 0.5s;
+      transform: translateX(-50%);
+      font-weight: 700;
+      box-shadow: 0 2px 12px #6366f122;
+    }
+    .toast.show { visibility: visible; opacity: 1; }
+    .cancel-edit-btn {
+      background: #e0e7ff;
+      color: #6366f1;
+      margin-left: 8px;
+      border: 2px solid #6366f144;
+      font-weight: 700;
+      transition: background 0.2s, color 0.2s;
+    }
+    .cancel-edit-btn:hover {
+      background: #6366f1;
+      color: #fff;
+    }
+    @keyframes fadeIn {
+      from {opacity: 0; transform: translateY(10px);}
+      to {opacity: 1; transform: translateY(0);}
+    }
+    /* MOBILE FIXES */
+    @media (max-width: 600px) {
+      .card {
+        padding: 8px !important;
+      }
+      .form-grid {
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+        padding: 6px;
+      }
+      .form-grid input,
+      .form-grid select,
+      .form-grid label {
+        max-width: 100% !important;
+        box-sizing: border-box;
+      }
+      .form-grid > div {
+        width: 100%;
+      }
+      button[type="submit"], .cancel-edit-btn {
+        width: 100%;
+        margin-top: 10px;
+        justify-content: center;
+        border-radius: 16px;
+        box-sizing: border-box;
+      }
+      .settings-panel input { width: 100px; }
+      table th, table td { font-size: 0.85rem; padding: 5px 2px; }
+    }
+    #totalsSummaryCard {
+      background: #e0e7ff; 
+      color: #222; 
+      border: 2px solid #6366f1; 
+      margin-bottom: 12px;
+      padding-top: 12px;
+      padding-bottom: 12px;
+      text-align: center;
+      border-radius: 1.4rem;
+      box-shadow: 0 2px 6px #6366f122;
+    }
+    #totalsSummary {
+      font-size: 1.13rem; 
+      font-weight: 700;
+      color: #06b6d4;
+    }
+    .toggle-btn-group {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .toggle-btn {
+      padding: 10px 22px;
+      border-radius: 22px;
+      border: none;
+      font-weight: 700;
+      font-size: 1.05rem;
+      background: #e0e7ff;
+      color: #6366f1;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      box-shadow: 0 2px 10px #6366f122;
+    }
+    .toggle-btn.active {
+      background: linear-gradient(90deg, #6366f1 0%, #06b6d4 100%);
+      color: #fff;
+      font-size: 1.12rem;
+      border: 2px solid #fff8;
+      box-shadow: 0 6px 18px #06b6d433;
+    }
+    .entry-form-section {
+      display: none;
+    }
+    .entry-form-section.active {
+      display: block;
+      animation: fadeIn 0.4s ease;
+    }
+    #fuelMeterTable th, #fuelMeterTable td,
+    #costTable th, #costTable td {
+      padding: 10px;
+      border: 1px solid #e0e7ff;
+      text-align: center;
+      font-size: 1rem;
+      white-space: nowrap;
+    }
+    #fuelMeterTable th,
+    #costTable th {
+      background: #e0e7ff;
+      color: #6366f1;
+    }
+    .action-btn {
+      padding: 6px 16px;
+      font-size: 0.95rem;
+      gap: 6px;
+      flex-direction: row !important;
+      min-width: 70px;
+      justify-content: center;
+    }
+    .action-group {
+      gap: 6px;
+    }
+    @media (max-width: 600px) {
+      #fuelMeterTable th, #fuelMeterTable td,
+      #costTable th, #costTable td {
+        font-size: 0.80rem;
+        padding: 4px 2px;
+      }
+      .action-btn span {
+        display: none;
+      }
+      .action-btn {
+        min-width: 36px;
+        font-size: 1em;
+      }
+    }
+    #costSummaryCard {
+      border: 2px solid #06b6d4;
+      border-radius: 1.2rem;
+      padding: 15px;
+      margin-bottom: 15px;
+      background: #e0e7ff;
+      box-shadow: 0 2px 6px #06b6d122;
+      color: #6366f1;
+    }
+    #costSummary {
+      font-size: 1.09rem;
+      color: #06b6d4;
+    }
+    .monthly-summary-badge {
+      font-size: 1.07rem;
+      background: linear-gradient(90deg, #06b6d4 0%, #6366f1 100%);
+      color: #fff;
+      border-radius: 1rem;
+      padding: 7px 24px;
+      font-weight: 700;
+      margin-right: 16px;
+      box-shadow: 0 2px 8px #06b6d433;
+      letter-spacing: .01em;
+      display: inline-block;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div id="syncStatus" class="sync-status sync-offline">🔴 Offline</div>
+    <h1>⛽ Fuel Tracker</h1>
+  </header>
+  <div id="firebaseNotice" class="firebase-notice">
+    ⚠️ <strong>Firebase Setup Required:</strong> Configure Firebase for cloud sync across devices.
+    <button onclick="showFirebaseSetup()" class="success">Setup Guide</button>
+  </div>
+  <div class="settings">
+    <button onclick="toggleSettings()" class="settings-toggle" aria-label="Toggle settings">⚙️ Settings</button>
+  </div>
+  <div class="settings-panel" id="settingsPanel">
+    <label for="bikeMileage">Bike Mileage (km/L)</label>
+    <input type="number" id="bikeMileage" step="0.1" aria-label="Bike Mileage">
+    <div class="action-group" style="margin-top:10px;">
+      <button onclick="saveSettings()" class="action-btn save">💾 Save Settings</button>
+      <button onclick="resetApp()" class="action-btn reset">🗑️ Reset App</button>
+    </div>
+  </div>
+  <main>
+    <!-- Toggle Buttons -->
+    <div class="toggle-btn-group">
+      <button id="toggleFuelBtn" class="toggle-btn" onclick="showEntryForm('fuel')">Fuel Meter Entry</button>
+      <button id="toggleCostBtn" class="toggle-btn" onclick="showEntryForm('cost')">Cost Expenditure</button>
+    </div>
+    <!-- Fuel Meter Entry Form & Table -->
+    <div id="fuelMeterSection" class="entry-form-section">
+      <div class="card" id="totalsSummaryCard">
+        <h3 style="margin-top: 0;">Current Fuel Status</h3>
+        <div id="totalsSummary"></div>
+      </div>
+      <div class="card">
+        <h2>Fuel Meter Entry</h2>
+        <form id="fuelForm" class="form-grid" autocomplete="off">
+          <div>
+            <label for="date">Date</label>
+            <input type="date" id="date" required aria-label="Date">
+          </div>
+          <div>
+            <label for="meterStart">Meter Start</label>
+            <input type="number" id="meterStart" step="0.1" required aria-label="Meter Start">
+          </div>
+          <div>
+            <label for="meterEnd">Meter End</label>
+            <input type="number" id="meterEnd" step="0.1" required aria-label="Meter End">
+          </div>
+          <div>
+            <label for="distance">Distance</label>
+            <input type="number" id="distance" step="0.1" readonly aria-label="Distance">
+          </div>
+          <div>
+            <label for="fuel">Fuel Added (liters)</label>
+            <input type="number" id="fuel" step="0.01" required aria-label="Fuel Added in liters">
+          </div>
+          <div>
+            <label for="cost">Cost (₹)</label>
+            <input type="number" id="cost" step="0.01" required aria-label="Cost in rupees">
+          </div>
+          <div>
+            <label for="remainingKm">Remaining KM</label>
+            <input type="number" id="remainingKm" step="0.1" readonly aria-label="Remaining Kilometers">
+          </div>
+          <div style="grid-column: 1 / -1; text-align:center;">
+            <button type="submit" id="submitBtn">💾 Save Entry</button>
+            <button type="button" id="cancelEditBtn" class="cancel-edit-btn" style="display:none;">Cancel Edit</button>
+          </div>
+        </form>
+      </div>
+      <div class="card">
+        <div class="records-header">
+          <h2>Fuel Meter Records</h2>
+          <button onclick="exportCSV()" class="export-btn" aria-label="Export as CSV">📥 Export CSV</button>
+        </div>
+        <table id="fuelMeterTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Distance</th>
+              <th>Fuel Used</th>
+              <th>Fuel Added</th>
+              <th>Cost</th>
+              <th>Available Fuel</th>
+              <th>Remaining KM</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <!-- Cost Expenditure Entry Form & Table -->
+    <div id="costSection" class="entry-form-section">
+      <div class="card" id="costSummaryCard">
+        <h3 style="margin-top: 0; text-align:center;">Cost Summary</h3>
+        <div id="costSummary" style="text-align:center; font-size:1.1em; line-height:1.8;"></div>
+      </div>
+      <div class="card">
+        <h2>Cost Expenditure</h2>
+        <form id="costForm" class="form-grid" autocomplete="off">
+          <div>
+            <label for="costDate">Date</label>
+            <input type="date" id="costDate" required aria-label="Cost Date">
+          </div>
+          <div>
+            <label for="costItem">Item</label>
+            <select id="costItem" required aria-label="Cost Item">
+              <option value="Petrol">Petrol</option>
+              <option value="Goods">Goods</option>
+              <option value="Maintenance">Maintenance</option>
+              <option value="Others">Others</option>
+            </select>
+          </div>
+          <div id="costSubItemDiv" style="display:none;">
+            <label for="costSubItem">Details</label>
+            <select id="costSubItem" aria-label="Cost Sub Item">
+              <!-- Options will be loaded dynamically -->
+            </select>
+          </div>
+          <div>
+            <label for="costAmount">Cost (₹)</label>
+            <input type="number" id="costAmount" step="0.01" required aria-label="Cost Amount">
+          </div>
+          <div style="grid-column: 1 / -1; text-align:center;">
+            <button type="submit" id="costSubmitBtn">💾 Save Cost</button>
+            <button type="button" id="cancelCostEditBtn" class="cancel-edit-btn" style="display:none;">Cancel Edit</button>
+          </div>
+        </form>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:4px;">Cost Expenditure Records</h3>
+        <table id="costTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Item</th>
+              <th>Details</th>
+              <th>Cost (₹)</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Monthly Summaries</h2>
+      <div id="monthlySummary"></div>
+      <span class="monthly-summary-badge">Up to Date!</span>
+    </div>
+  </main>
+  <div id="toast" class="toast">✅ Saved successfully</div>
+  <!-- Your JS logic here -->
+  <!-- (Copy your full working JavaScript logic as used before) -->
+</body>
+</html>
