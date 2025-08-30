@@ -1028,6 +1028,84 @@ Your data will then sync across all devices!`);
       }
       renderTotalsSummary();
     };
-  </script>
+  
+// --- Fuel Form submission handler ---
+document.getElementById('fuelForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  try {
+    updateSyncStatus('syncing');
+    const rec = {
+      date: document.getElementById('date').value,
+      start: num(document.getElementById('meterStart').value),
+      end: num(document.getElementById('meterEnd').value),
+      distance: num(document.getElementById('distance').value),
+      fuel: num(document.getElementById('fuel').value),
+      cost: num(document.getElementById('cost').value),
+      remainingKm: num(document.getElementById('remainingKm').value)
+    };
+    if (editIndex >= 0) {
+      if (isFirebaseConfigured && db && records[editIndex].firebaseId) {
+        await updateDoc(doc(db, 'fuelRecords', records[editIndex].firebaseId), rec);
+      } else {
+        records[editIndex] = rec;
+        localStorage.setItem('fuelRecords', JSON.stringify(records));
+      }
+      editIndex = -1;
+    } else {
+      if (isFirebaseConfigured && db) {
+        await addDoc(collection(db, 'fuelRecords'), rec);
+      } else {
+        records.push(rec);
+        localStorage.setItem('fuelRecords', JSON.stringify(records));
+      }
+    }
+    renderFuelMeterTable();
+    this.reset();
+    document.getElementById('cancelEditBtn').style.display = 'none';
+    updateSyncStatus(isFirebaseConfigured ? 'online' : 'offline');
+  } catch (err) {
+    console.error(err);
+    updateSyncStatus('offline');
+  }
+});
+
+// --- Cost Form submission handler ---
+document.getElementById('costForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  try {
+    updateSyncStatus('syncing');
+    const rec = {
+      date: document.getElementById('costDate').value,
+      item: document.getElementById('costItem').value,
+      subItem: document.getElementById('costSubItem').value || '',
+      cost: num(document.getElementById('costAmount').value)
+    };
+    if (costEditIndex >= 0) {
+      if (isFirebaseConfigured && db && costRecords[costEditIndex].firebaseId) {
+        await updateDoc(doc(db, 'costRecords', costRecords[costEditIndex].firebaseId), rec);
+      } else {
+        costRecords[costEditIndex] = rec;
+        localStorage.setItem('costRecords', JSON.stringify(costRecords));
+      }
+      costEditIndex = -1;
+    } else {
+      if (isFirebaseConfigured && db) {
+        await addDoc(collection(db, 'costRecords'), rec);
+      } else {
+        costRecords.push(rec);
+        localStorage.setItem('costRecords', JSON.stringify(costRecords));
+      }
+    }
+    renderCostTable();
+    this.reset();
+    document.getElementById('cancelCostEditBtn').style.display = 'none';
+    updateSyncStatus(isFirebaseConfigured ? 'online' : 'offline');
+  } catch (err) {
+    console.error(err);
+    updateSyncStatus('offline');
+  }
+});
+
+</script>
 </body>
 </html>
